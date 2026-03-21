@@ -274,7 +274,7 @@ def main() -> None:
     ):
         n_chunk = len(chunk)
         chunk["_row_num"] = range(current_row, current_row + n_chunk)
-        mask = chunk[LIE_LABEL_COL].astype(str).str.strip().str.upper() == "LIE"
+        mask = chunk[LIE_LABEL_COL].astype(str).str.strip() == "LABEL_1"
         parts.append(chunk[mask].copy())
         current_row += n_chunk
         if (chunk_idx + 1) % 10 == 0:
