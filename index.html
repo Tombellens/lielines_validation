@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LieLines — Validation Tool</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* ── MODALS ──────────────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+}
+.modal-box {
+  background: #fff; border-radius: 14px;
+  padding: 36px 40px; max-width: 440px; width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+}
+.modal-box h2 {
+  font-size: 1.25rem; font-weight: 800; color: #1e293b;
+  text-align: center; margin-bottom: 4px;
+}
+.modal-logo {
+  text-align: center; font-size: 2rem; margin-bottom: 12px; letter-spacing: -1px;
+}
+.modal-sub {
+  text-align: center; color: #64748b; font-size: 0.85rem; margin-bottom: 28px;
+}
+.modal-field { margin-bottom: 18px; }
+.modal-field label {
+  display: block; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: #475569; margin-bottom: 7px;
+}
+.modal-field input {
+  width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  padding: 11px 13px; font-size: 0.95rem; color: #1e293b;
+  background: #fff; outline: none; transition: border-color 0.15s;
+}
+.modal-field input:focus { border-color: #6366f1; }
+.modal-err { color: #dc2626; font-size: 0.82rem; margin-top: 10px; min-height: 18px; }
+.btn-primary {
+  width: 100%; padding: 12px; border: none; border-radius: 9px;
+  background: #6366f1; color: #fff; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; margin-top: 6px;
+}
+.btn-primary:hover  { background: #4f46e5; }
+.btn-primary:active { background: #4338ca; }
+
+/* ── SESSION BAR ─────────────────────────────────────────────────────────── */
+
+#sessionBar {
+  background: #1e293b; color: #e2e8f0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 20px; font-size: 0.85rem; flex-wrap: wrap;
+}
+#sessionInfo { font-weight: 600; flex: 1; }
+.bar-btn {
+  background: rgba(255,255,255,0.1); border: none; border-radius: 6px;
+  color: #cbd5e1; font-size: 0.8rem; padding: 5px 11px; cursor: pointer;
+  transition: background 0.15s;
+}
+.bar-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* ── PROGRESS ────────────────────────────────────────────────────────────── */
+
+#progressWrap {
+  background: #fff; border-bottom: 1px solid #e2e8f0;
+  padding: 10px 20px;
+}
+.progress-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: #64748b; margin-bottom: 6px;
+}
+.progress-track {
+  height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;
+  display: flex; gap: 2px;
+}
+.progress-fill-r {
+  background: #6366f1; border-radius: 3px; transition: width 0.3s;
+}
+.progress-fill-u {
+  background: #10b981; border-radius: 3px; transition: width 0.3s;
+}
+
+/* ── MAIN CONTAINER ──────────────────────────────────────────────────────── */
+
+#mainUI { display: none; }
+.container { max-width: 780px; margin: 28px auto; padding: 0 18px 60px; }
+
+/* ── METADATA STRIP ──────────────────────────────────────────────────────── */
+
+.meta-strip {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: 0.78rem; color: #475569; margin-bottom: 14px;
+  align-items: center;
+}
+.meta-chip {
+  background: #f1f5f9; border: 1px solid #e2e8f0;
+  border-radius: 20px; padding: 3px 11px; font-weight: 500;
+}
+.meta-chip span { color: #94a3b8; font-weight: 400; margin-right: 4px; }
+
+/* ── CONTEXT CARD ────────────────────────────────────────────────────────── */
+
+.context-card {
+  background: #fff; border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 24px 28px; margin-bottom: 22px;
+}
+.context-sentence {
+  font-size: 0.9rem; color: #94a3b8; line-height: 1.65;
+  padding: 5px 0; border-left: 2px solid #e2e8f0; padding-left: 12px;
+  margin: 4px 0;
+}
+.context-sentence.empty { display: none; }
+.target-sentence {
+  font-size: 1rem; line-height: 1.7; font-weight: 600; color: #1e293b;
+  background: #fef9c3; border-left: 3px solid #f59e0b;
+  border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 10px 0;
+}
+.context-divider {
+  border: none; border-top: 1px dashed #e2e8f0; margin: 8px 0;
+}
+
+/* ── VERDICT BUTTONS ─────────────────────────────────────────────────────── */
+
+.verdict-area { margin-bottom: 24px; }
+.verdict-label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #475569; margin-bottom: 12px;
+}
+.verdict-hint {
+  font-size: 0.78rem; color: #94a3b8; margin-bottom: 14px; line-height: 1.5;
+}
+.verdict-btns {
+  display: flex; gap: 14px;
+}
+.btn-verdict {
+  flex: 1; padding: 18px 10px; border: 2.5px solid transparent;
+  border-radius: 11px; font-size: 1.1rem; font-weight: 800;
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em;
+}
+.btn-yes {
+  background: #f0fdf4; color: #166534; border-color: #bbf7d0;
+}
+.btn-yes:hover   { background: #dcfce7; border-color: #86efac; }
+.btn-yes.selected {
+  background: #16a34a; color: #fff; border-color: #15803d;
+  box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+}
+.btn-no {
+  background: #fef2f2; color: #991b1b; border-color: #fecaca;
+}
+.btn-no:hover   { background: #fee2e2; border-color: #fca5a5; }
+.btn-no.selected {
+  background: #dc2626; color: #fff; border-color: #b91c1c;
+  box-shadow: 0 4px 14px rgba(220,38,38,0.35);
+}
+
+/* ── KEYBOARD SHORTCUT HINT ──────────────────────────────────────────────── */
+
+.kbd-hint {
+  text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 8px;
+}
+.kbd {
+  display: inline-block; background: #f1f5f9; border: 1px solid #cbd5e1;
+  border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 0.8rem;
+}
+
+/* ── NAVIGATION ──────────────────────────────────────────────────────────── */
+
+.btn-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.nav-left { display: flex; align-items: center; gap: 8px; }
+.btn-nav {
+  background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  color: #64748b; font-size: 0.88rem; padding: 8px 16px; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-nav:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
+.btn-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.jump-group { display: flex; align-items: center; gap: 4px; }
+.jump-group input {
+  width: 60px; border: 1.5px solid #e2e8f0; border-radius: 7px;
+  padding: 7px 8px; font-size: 0.85rem; text-align: center; outline: none;
+}
+.jump-group input:focus { border-color: #6366f1; }
+.btn-jump {
+  background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 7px;
+  color: #475569; font-size: 0.82rem; padding: 7px 10px; cursor: pointer;
+}
+.btn-jump:hover { background: #e2e8f0; }
+.btn-save {
+  background: #6366f1; color: #fff; border: none; border-radius: 9px;
+  font-size: 0.95rem; font-weight: 700; padding: 11px 24px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-save:hover  { background: #4f46e5; }
+.btn-save:active { background: #4338ca; }
+
+/* ── ANNOTATED BADGE ─────────────────────────────────────────────────────── */
+
+.badge-done {
+  display: none; background: #d1fae5; color: #065f46;
+  border: 1px solid #a7f3d0; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700; padding: 3px 10px;
+}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #fff; border-radius: 8px;
+  padding: 10px 22px; font-size: 0.9rem; font-weight: 600;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  z-index: 999; white-space: nowrap;
+}
+#toast.show          { opacity: 1; }
+#toast.show.success  { background: #16a34a; }
+#toast.show.error    { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<!-- ── PASSWORD MODAL ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="passwordModal" style="display:flex;">
+  <div class="modal-box">
+    <div class="modal-logo">🔍</div>
+    <h2>LieLines Validation</h2>
+    <p class="modal-sub">Parliamentary lying-accusation annotation</p>
+    <div class="modal-field">
+      <label>Password</label>
+      <input type="password" id="passwordInput" placeholder="Enter password"
+             onkeydown="if(event.key==='Enter') submitPassword()">
+    </div>
+    <div class="modal-err" id="passwordError"></div>
+    <button class="btn-primary" id="btnSignIn" onclick="submitPassword()">Sign In →</button>
+  </div>
+</div>
+
+<!-- ── NAME MODAL ────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="nameModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-logo">👤</div>
+    <h2>Who are you?</h2>
+    <p class="modal-sub">Enter your first name to start or resume your session</p>
+    <div class="modal-field">
+      <label>Your first name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Jan"
+             onkeydown="if(event.key==='Enter') startSession()">
+    </div>
+    <div class="modal-err" id="nameError"></div>
+    <button class="btn-primary" id="btnStart" onclick="startSession()">Start Annotating →</button>
+  </div>
+</div>
+
+<!-- ── MAIN UI ────────────────────────────────────────────────────────── -->
+<div id="mainUI">
+
+  <!-- Session bar -->
+  <div id="sessionBar">
+    <span id="sessionInfo">—</span>
+    <button class="bar-btn" onclick="changeSession()">Change name</button>
+    <button class="bar-btn" onclick="downloadAnnotations()">⬇ Download CSV</button>
+  </div>
+
+  <!-- Progress -->
+  <div id="progressWrap">
+    <div class="progress-labels">
+      <span id="progressLabelLeft">—</span>
+      <span id="progressLabelRight">—</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill-r" id="progressFillR" style="width:0%"></div>
+      <div class="progress-fill-u" id="progressFillU" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Metadata strip -->
+    <div class="meta-strip" id="metaStrip">
+      <div class="meta-chip"><span>Country</span><span id="fieldCountry">—</span></div>
+      <div class="meta-chip"><span>Dataset</span><span id="fieldDataset">—</span></div>
+      <div class="meta-chip"><span>Date</span><span id="fieldDate">—</span></div>
+      <div class="meta-chip"><span>Speaker</span><span id="fieldSpeaker">—</span></div>
+      <span class="badge-done" id="annotatedBadge">✓ annotated</span>
+    </div>
+
+    <!-- Context + sentence card -->
+    <div class="context-card" id="contextCard">
+      <div id="contextBefore"></div>
+      <div class="target-sentence" id="targetSentence">—</div>
+      <div id="contextAfter"></div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict-area">
+      <div class="verdict-label">
+        Is this sentence a genuine lying accusation?
+      </div>
+      <div class="verdict-hint">
+        Select <strong>YES</strong> if the speaker is explicitly accusing someone of lying or being dishonest.
+        Select <strong>NO</strong> if it is figurative language, a rhetorical question, a mere mention, or otherwise not a direct accusation.
+      </div>
+      <div class="verdict-btns">
+        <button class="btn-verdict btn-yes" id="btnYes" onclick="selectVerdict('YES')">
+          ✓ &nbsp;YES — genuine accusation
+        </button>
+        <button class="btn-verdict btn-no"  id="btnNo"  onclick="selectVerdict('NO')">
+          ✗ &nbsp;NO — false positive
+        </button>
+      </div>
+      <div class="kbd-hint">
+        Keyboard shortcuts: &nbsp;
+        <span class="kbd">Y</span> = Yes &nbsp;·&nbsp;
+        <span class="kbd">N</span> = No &nbsp;·&nbsp;
+        <span class="kbd">←</span> <span class="kbd">→</span> = Navigate &nbsp;·&nbsp;
+        <span class="kbd">Enter</span> = Save
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="btn-row">
+      <div class="nav-left">
+        <button class="btn-nav" id="btnPrev" onclick="navigate(-1)" disabled>← Prev</button>
+        <div class="jump-group" title="Jump to sequence position">
+          <input type="number" id="jumpInput" min="1" placeholder="#"
+                 onkeydown="if(event.key==='Enter') jumpToRow()">
+          <button class="btn-jump" onclick="jumpToRow()">Go</button>
+        </div>
+        <button class="btn-nav" id="btnNext" onclick="navigate(1)" disabled>Next →</button>
+      </div>
+      <button class="btn-save" id="btnSave" onclick="saveAnnotation()">Save &amp; Next →</button>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /mainUI -->
+
+<div id="toast"></div>
+
+<script>
+const API = "";
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+
+let authToken = localStorage.getItem("ll_auth_token") || "";
+
+function authFetch(url, options = {}) {
+  options.headers = Object.assign({}, options.headers, { "X-Auth-Token": authToken });
+  return fetch(url, options);
+}
+
+function handleUnauthorized() {
+  authToken = "";
+  localStorage.removeItem("ll_auth_token");
+  document.getElementById("mainUI").style.display    = "none";
+  document.getElementById("nameModal").style.display = "none";
+  document.getElementById("passwordModal").style.display = "flex";
+  document.getElementById("passwordError").textContent = "Session expired. Please sign in again.";
+}
+
+async function submitPassword() {
+  const pw  = document.getElementById("passwordInput").value.trim();
+  const err = document.getElementById("passwordError");
+  err.textContent = "";
+  if (!pw) { err.textContent = "Please enter the password."; return; }
+
+  const btn = document.getElementById("btnSignIn");
+  btn.disabled = true; btn.textContent = "Checking…";
+
+  try {
+    const res  = await fetch(`${API}/api/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw }),
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      authToken = data.token;
+      localStorage.setItem("ll_auth_token", authToken);
+      document.getElementById("passwordModal").style.display = "none";
+      document.getElementById("nameModal").style.display     = "flex";
+      document.getElementById("passwordInput").value = "";
+      const saved = localStorage.getItem("ll_annotator_name") || "";
+      if (saved) document.getElementById("nameInput").value = saved;
+      document.getElementById("nameInput").focus();
+    } else {
+      err.textContent = "Incorrect password — please try again.";
+      document.getElementById("passwordInput").value = "";
+      document.getElementById("passwordInput").focus();
+    }
+  } catch (e) {
+    err.textContent = "Could not connect to server.";
+  } finally {
+    btn.disabled = false; btn.textContent = "Sign In →";
+  }
+}
+
+// ── SESSION STATE ──────────────────────────────────────────────────────────
+
+let annotatorName      = "";
+let currentSeqPos      = 0;
+let selectedVerdict    = "";      // "YES" | "NO" | ""
+let annotatedPositions = new Set();
+let reliabilityTotal   = 0;
+let uniqueTotal        = 0;
+let reliabilityDone    = 0;
+let uniqueDone         = 0;
+
+// ── NAME / SESSION ─────────────────────────────────────────────────────────
+
+async function startSession() {
+  const nameInput = document.getElementById("nameInput");
+  const err       = document.getElementById("nameError");
+  const raw       = nameInput.value.trim();
+  err.textContent = "";
+
+  if (!raw) { err.textContent = "Please enter your first name."; return; }
+
+  const btn = document.getElementById("btnStart");
+  btn.disabled = true; btn.textContent = "Loading…";
+
+  try {
+    const res  = await authFetch(`${API}/api/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: raw }),
+    });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || "Registration failed."; return; }
+
+    annotatorName      = data.display_name;
+    reliabilityTotal   = data.reliability_total;
+    uniqueTotal        = data.unique_total;
+    reliabilityDone    = data.reliability_done;
+    uniqueDone         = data.unique_done;
+    annotatedPositions = new Set(data.annotated_positions);
+
+    localStorage.setItem("ll_annotator_name", annotatorName);
+    nameInput.value = annotatorName;
+
+    document.getElementById("nameModal").style.display = "none";
+    document.getElementById("mainUI").style.display    = "block";
+    document.getElementById("sessionInfo").textContent =
+      `Annotator: ${annotatorName}`;
+
+    updateProgress();
+    await loadRow(data.next_seq_pos);
+
+  } catch (e) {
+    err.textContent = "Network error — could not connect to server.";
+  } finally {
+    btn.disabled = false; btn.textContent = "Start Annotating →";
+  }
+}
+
+function changeSession() {
+  document.getElementById("mainUI").style.display    = "none";
+  document.getElementById("nameModal").style.display = "flex";
+  document.getElementById("nameInput").focus();
+}
+
+// ── PROGRESS ───────────────────────────────────────────────────────────────
+
+function updateProgress() {
+  const totalDone = reliabilityDone + uniqueDone;
+  const totalPoss = reliabilityTotal + uniqueTotal;
+  const rPct = reliabilityTotal > 0 ? (reliabilityDone / reliabilityTotal) * 100 : 0;
+  const uPct = uniqueTotal      > 0 ? (uniqueDone      / uniqueTotal)      * 100 : 0;
+
+  // Split the bar: left half = reliability, right half = unique
+  document.getElementById("progressFillR").style.width = (rPct / 2) + "%";
+  document.getElementById("progressFillU").style.width = (uPct / 2) + "%";
+
+  document.getElementById("progressLabelLeft").textContent =
+    `Shared: ${reliabilityDone} / ${reliabilityTotal}  ·  Unique: ${uniqueDone} / ${uniqueTotal}`;
+  document.getElementById("progressLabelRight").textContent =
+    `Total: ${totalDone} annotated  ·  Seq #${currentSeqPos + 1}`;
+}
+
+// ── ROW LOADING ────────────────────────────────────────────────────────────
+
+async function loadRow(seqPos) {
+  try {
+    const res = await authFetch(
+      `${API}/api/row/${seqPos}?annotator=${encodeURIComponent(annotatorName)}`
+    );
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (!res.ok) {
+      const err = await res.json();
+      if (err.error === "reliability_exhausted" || err.error === "unique_exhausted") {
+        showToast("You've completed all available sentences — thank you! 🎉", "success");
+      } else {
+        showToast("Could not load sentence", "error");
+      }
+      return;
+    }
+
+    const data = await res.json();
+    currentSeqPos = seqPos;
+
+    // Metadata
+    document.getElementById("fieldCountry").textContent = data.data.country       || "—";
+    document.getElementById("fieldDataset").textContent = data.data.source_dataset|| "—";
+    document.getElementById("fieldDate").textContent    = data.data.date           || "—";
+    document.getElementById("fieldSpeaker").textContent = data.data.speaker        || "—";
+
+    // Context: before
+    const beforeEl = document.getElementById("contextBefore");
+    beforeEl.innerHTML = "";
+    (data.data.context_before || []).forEach(sent => {
+      if (!sent) return;
+      const d = document.createElement("div");
+      d.className = "context-sentence";
+      d.textContent = sent;
+      beforeEl.appendChild(d);
+    });
+
+    // Context: divider + target
+    document.getElementById("targetSentence").textContent = data.data.sentence || "—";
+
+    // Context: after
+    const afterEl = document.getElementById("contextAfter");
+    afterEl.innerHTML = "";
+    (data.data.context_after || []).forEach(sent => {
+      if (!sent) return;
+      const d = document.createElement("div");
+      d.className = "context-sentence";
+      d.textContent = sent;
+      afterEl.appendChild(d);
+    });
+
+    // Annotated badge
+    const isDone = annotatedPositions.has(seqPos);
+    document.getElementById("annotatedBadge").style.display = isDone ? "inline-block" : "none";
+
+    // Pre-select existing verdict if any
+    selectedVerdict = data.existing_verdict || "";
+    renderVerdictButtons();
+
+    // Nav buttons
+    document.getElementById("btnPrev").disabled = (seqPos === 0);
+    document.getElementById("btnNext").disabled = false; // always allow next (server returns 404 at end)
+
+    updateProgress();
+
+  } catch (e) {
+    showToast("Network error loading sentence", "error");
+  }
+}
+
+// ── VERDICT BUTTONS ────────────────────────────────────────────────────────
+
+function selectVerdict(v) {
+  selectedVerdict = (selectedVerdict === v) ? "" : v;   // toggle off if already selected
+  renderVerdictButtons();
+}
+
+function renderVerdictButtons() {
+  document.getElementById("btnYes").classList.toggle("selected", selectedVerdict === "YES");
+  document.getElementById("btnNo").classList.toggle("selected",  selectedVerdict === "NO");
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+
+function navigate(dir) {
+  const newPos = currentSeqPos + dir;
+  if (newPos >= 0) loadRow(newPos);
+}
+
+function jumpToRow() {
+  const input = document.getElementById("jumpInput");
+  const n = parseInt(input.value);
+  if (isNaN(n) || n < 1) { showToast("Enter a valid sequence number", "error"); return; }
+  input.value = "";
+  loadRow(n - 1);
+}
+
+// ── SAVE ───────────────────────────────────────────────────────────────────
+
+async function saveAnnotation() {
+  if (!selectedVerdict) {
+    showToast("Please select YES or NO first", "error");
+    return;
+  }
+
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  try {
+    const res = await authFetch(`${API}/api/annotate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        annotator_name: annotatorName,
+        seq_pos:        currentSeqPos,
+        verdict:        selectedVerdict,
+      }),
+    });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    const result = await res.json();
+
+    if (result.success) {
+      // Update local state
+      const wasAnnotated = annotatedPositions.has(currentSeqPos);
+      annotatedPositions.add(currentSeqPos);
+      if (!wasAnnotated) {
+        if (currentSeqPos % 2 === 0) reliabilityDone++;
+        else                          uniqueDone++;
+      }
+
+      document.getElementById("annotatedBadge").style.display = "inline-block";
+      showToast(`Saved: ${selectedVerdict}`, "success");
+      updateProgress();
+
+      // Auto-advance
+      setTimeout(() => loadRow(currentSeqPos + 1), 450);
+    } else {
+      showToast(result.error || "Save failed", "error");
+    }
+  } catch (e) {
+    showToast("Network error", "error");
+  } finally {
+    btn.disabled = false; btn.textContent = "Save & Next →";
+  }
+}
+
+// ── DOWNLOAD ───────────────────────────────────────────────────────────────
+
+function downloadAnnotations() {
+  authFetch(`${API}/api/download`)
+    .then(res => {
+      if (res.status === 401) { handleUnauthorized(); return null; }
+      if (res.status === 404) { showToast("No annotations saved yet", "error"); return null; }
+      return res.blob();
+    })
+    .then(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement("a");
+      a.href     = url;
+      a.download = "lielines_annotations.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => showToast("Download failed", "error"));
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+
+let toastTimer = null;
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ""; }, 2800);
+}
+
+// ── KEYBOARD SHORTCUTS ─────────────────────────────────────────────────────
+
+document.addEventListener("keydown", (e) => {
+  const tag = document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  if (document.getElementById("passwordModal").style.display !== "none") return;
+  if (document.getElementById("nameModal").style.display     !== "none") return;
+
+  if (e.key === "y" || e.key === "Y") { e.preventDefault(); selectVerdict("YES"); }
+  if (e.key === "n" || e.key === "N") { e.preventDefault(); selectVerdict("NO");  }
+  if (e.key === "Enter")              { e.preventDefault(); saveAnnotation();      }
+  if (e.key === "ArrowLeft")          { navigate(-1); }
+  if (e.key === "ArrowRight")         { navigate(1);  }
+});
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+
+(async function init() {
+  if (authToken) {
+    try {
+      const res = await authFetch(`${API}/api/row/0?annotator=__probe__`);
+      if (res.status !== 401) {
+        // Token still valid
+        document.getElementById("passwordModal").style.display = "none";
+        document.getElementById("nameModal").style.display     = "flex";
+        const saved = localStorage.getItem("ll_annotator_name") || "";
+        if (saved) document.getElementById("nameInput").value = saved;
+        document.getElementById("nameInput").focus();
+        return;
+      }
+    } catch (e) { /* fall through */ }
+  }
+  authToken = "";
+  localStorage.removeItem("ll_auth_token");
+  document.getElementById("passwordModal").style.display = "flex";
+  document.getElementById("passwordInput").focus();
+})();
+</script>
+</body>
+</html>

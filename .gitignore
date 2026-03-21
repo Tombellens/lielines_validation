@@ -1,0 +1,15 @@
+# Generated data — never commit these
+sample.csv
+annotations.csv
+assignments.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
